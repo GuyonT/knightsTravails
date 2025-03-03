@@ -1,205 +1,126 @@
-class ListNode {
-  constructor(value) {
-    this.value = value;
-    this.nextNode = null;
+class boardNode {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.edges = [];
+    this.isVisited = undefined;
+    this.parent = null;
   }
 }
-class LinkedList {
+class chessBoard {
   constructor() {
-    this.head = null;
-    this.tail = null;
-    this.size = 0;
+    this.size = 8;
+    this.board = {};
+    this.buildBoard();
   }
 
-  append(value) {
-    let newNode = new ListNode(value);
-    console.log(newNode);
-    if (this.head === null) {
-      this.head = newNode;
-      this.tail = newNode;
-      this.size++;
-    } else {
-      this.tail.nextNode = newNode;
-      this.tail = newNode;
-      this.size++;
-    }
-  }
-
-  prepend(value) {
-    let newNode = new ListNode(value);
-    if (this.head === null) {
-      this.head = newNode;
-      this.tail = newNode;
-      this.size++;
-    } else {
-      newNode.nextNode = this.head;
-      this.head = newNode;
-      this.size++;
-    }
-  }
-
-  getSize() {
-    return this.size;
-  }
-
-  getHead() {
-    return this.head.value;
-  }
-
-  getTail() {
-    return this.tail.value;
-  }
-
-  at(index) {
-    if (this.head === null || index < 0) {
-      return null;
-    }
-
-    let currentNode = this.head;
-    let i = 0;
-
-    while (i < index && currentNode !== null) {
-      currentNode = currentNode.nextNode;
-      i++;
-    }
-
-    if (currentNode === null) {
-      return null;
-    } else {
-      return currentNode.value;
-    }
-  }
-
-  pop() {
-    if (this.head === null) {
-      console.log("The list is already empty");
-    } else if (this.head === this.tail) {
-      this.head = this.tail = null;
-      this.size = 0;
-    } else {
-      let currentNode = this.head;
-      while (currentNode.nextNode !== this.tail) {
-        currentNode = currentNode.nextNode;
-      }
-      currentNode.nextNode = null;
-      this.tail = currentNode;
-      this.size--;
-    }
-  }
-
-  contains(value) {
-    if (this.head === null) {
-      console.log("The list is empty");
-      return false;
-    }
-    let currentNode = this.head;
-    while (currentNode !== null) {
-      if (currentNode.value === value) {
-        return true;
-      } else {
-        currentNode = currentNode.nextNode;
+  buildBoard() {
+    for (let x = 0; x < 8; x++) {
+      for (let y = 0; y < 8; y++) {
+        if (this.#isValidCoordinates(x, y)) {
+          const node = new boardNode(x, y);
+          this.board[`${x},${y}`] = node;
+        }
       }
     }
-    return false;
+    this.#getKnightEdges(this.board);
   }
 
-  find(value) {
-    if (this.head === null) {
-      console.log("The list is empty");
-      return null;
+  #isValidCoordinates(x, y) {
+    return x >= 0 && x < 8 && y >= 0 && y < 8;
+  }
+
+  #getKnightEdges() {
+    for (let key in this.board) {
+      const node = this.board[key];
+      const [x, y] = [node.x, node.y];
+
+      const possibleMoves = [
+        [x - 1, y - 2],
+        [x - 2, y - 1],
+        [x + 2, y - 1],
+        [x + 1, y - 2],
+        [x - 2, y + 1],
+        [x - 1, y + 2],
+        [x + 1, y + 2],
+        [x + 2, y + 1],
+      ];
+
+      for (let [edgeX, edgeY] of possibleMoves) {
+        if (this.#isValidCoordinates(edgeX, edgeY)) {
+          const edgeCoordinates = `${edgeX},${edgeY}`;
+          node.edges.push(this.board[edgeCoordinates]);
+        }
+      }
     }
-    let currentNode = this.head;
-    let i = 0;
-    while (currentNode !== null) {
-      if (currentNode.value === value) {
-        return i;
+  }
+
+  #reconstructPath(endNode) {
+    let path = [];
+    let current = endNode;
+
+    while (current !== null) {
+      path.unshift([current.x, current.y]);
+      current = current.parent;
+    }
+    return path;
+  }
+
+  #resetBoard() {
+    for (let key in this.board) {
+      this.board[key].isVisited = false;
+      this.board[key].parent = null;
+    }
+  }
+
+  #formatPath(path) {
+    if (!path) return "not a valid path";
+
+    let stepsMessage = "Path found in " + (path.length - 1) + " moves !" + "\n";
+
+    for (let i = 0; i < path.length; i++) {
+      const coordinates = path[i];
+      stepsMessage += `[${coordinates[0]}, ${coordinates[1]}], `;
+    }
+
+    return stepsMessage;
+  }
+
+  knightMoves(start, finish) {
+    this.#resetBoard();
+    if (
+      !this.#isValidCoordinates(start[0], start[1]) ||
+      !this.#isValidCoordinates(finish[0], finish[1])
+    ) {
+      throw new Error("enter valid coordinates");
+    }
+
+    const startNode = this.board[`${start[0]},${start[1]}`];
+    const finishNode = this.board[`${finish[0]},${finish[1]}`];
+
+    let queue = [startNode];
+    startNode.isVisited = true;
+
+    while (queue.length !== 0) {
+      let currentNode = queue.shift();
+
+      if (currentNode.x === finishNode.x && currentNode.y === finishNode.y) {
+        const reconstrucPath = this.#reconstructPath(currentNode);
+        return this.#formatPath(reconstrucPath);
       } else {
-        currentNode = currentNode.nextNode;
-        i++;
+        for (let i = 0; i < currentNode.edges.length; i++) {
+          const neighbor = currentNode.edges[i];
+          if (!neighbor.isVisited) {
+            neighbor.isVisited = true;
+            neighbor.parent = currentNode;
+            queue.push(neighbor);
+          }
+        }
       }
     }
     return null;
   }
-
-  toString() {
-    let string = "";
-    if (this.head === null) {
-      console.log("The list is empty");
-      string += `No items `;
-      return string;
-    }
-    let currentNode = this.head;
-    while (currentNode !== null) {
-      string += `( ${currentNode.value} ) -> `;
-      currentNode = currentNode.nextNode;
-    }
-    string += `null`;
-    return string;
-  }
-
-  insertAt(value, index) {
-    if (index < 0 || index > this.size) {
-      console.log("out of bounds");
-      return;
-    }
-
-    if (index === 0) {
-      this.prepend(value);
-      return;
-    } else if (index === this.size) {
-      this.append(value);
-      return;
-    }
-
-    let currentNode = this.head;
-    let i = 0;
-
-    while (i < index - 1) {
-      currentNode = currentNode.nextNode;
-      i++;
-    }
-
-    let previousNode = currentNode;
-    let newNode = new ListNode(value);
-
-    newNode.nextNode = previousNode.nextNode;
-    previousNode.nextNode = newNode;
-    this.size++;
-  }
-
-  removeAt(index) {
-    if (index < 0 || index >= this.size) {
-      console.log("out of bounds");
-      return;
-    } else if (index === 0) {
-      this.head = this.head.nextNode;
-      this.size--;
-      return;
-    }
-
-    if (index === this.size - 1) {
-      this.pop();
-      return;
-    }
-
-    let currentNode = this.head;
-    let i = 0;
-    while (i < index - 1) {
-      currentNode = currentNode.nextNode;
-      i++;
-    }
-
-    let previousNode = currentNode;
-    let nextNode = currentNode.nextNode.nextNode;
-
-    previousNode.nextNode = nextNode;
-    this.size--;
-  }
 }
 
-let list = new LinkedList();
-list.append("dog");
-list.append("cat");
-list.append("horse");
-list.prepend("snake");
-console.log(list.toString());
+let board = new chessBoard();
+console.log(board.knightMoves([3, 2], [1, 2]));
